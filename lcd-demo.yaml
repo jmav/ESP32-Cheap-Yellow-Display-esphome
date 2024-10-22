@@ -1,0 +1,151 @@
+# Basic yaml code to get the ESP32-2432S028R display to work in ESPHome.
+#
+# This simplified yaml config displays two rectangles acting as binary touch sensors inside of Home Assistant.
+# It also expose WEB interface
+#
+# Initially written by Jonny Bergdahl
+# - [Sample GitHub reference](https://github.com/witnessmenow/ESP32-Cheap-Yellow-Display/tree/main/Examples/ESPHome/4-TouchDemo)
+# - [Display code reference](https://github.com/witnessmenow/ESP32-Cheap-Yellow-Display/tree/main)
+#
+# ============================================================
+#
+# To sucessfully build config, create a folder named fonts in your ESPHome folder, and copy the file fonts/Arimo-Regular.ttf there.
+#
+# ============================================================
+#
+# Install firmware simply by uploading trough USB.
+#
+# ============================================================
+
+esphome:
+  name: lcd-demo
+  friendly_name: lcd-demo
+
+wifi:
+  networks:
+    - ssid: SSID-NAME
+      password: "somepass"
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: $device_name Fallback Hotspot
+    password: "somepass"
+
+# The ESP32-2432S028R uses a standard ESP32-WROVER, so we use the esp32dev defintion
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+
+# Set OTA password
+ota:
+  platform: esphome
+
+captive_portal:
+
+# ============================================================
+# ESPHome Display related setup
+#
+# Create a font to use, add and remove glyphs as needed.
+font:
+  - file: "fonts/Arimo-Regular.ttf"
+    id: arimo20
+    size: 20
+    glyphs: '!"%()+=,-_.:°0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖ abcdefghijklmnopqrstuvwxyzåäö'
+
+  - file: "fonts/Arimo-Regular.ttf"
+    id: arimo96
+    size: 96
+    glyphs: "AB"
+
+# Create a Home Assistant blue color
+color:
+  - id: ha_blue
+    hex: 51c0f2
+
+# ============================================================
+# Home Assistant related setup
+#
+light:
+  - platform: monochromatic
+    output: backlight_pwm
+    name: Display Backlight
+    id: backlight
+    restore_mode: ALWAYS_ON
+
+# Setup two binary sensors for the two areas for touch
+binary_sensor:
+  - platform: touchscreen
+    name: Button A
+    x_min: 20
+    x_max: 140
+    y_min: 60
+    y_max: 180
+
+  - platform: touchscreen
+    name: Button B
+    x_min: 180
+    x_max: 300
+    y_min: 60
+    y_max: 180
+
+# ============================================================
+# Hardware related setup
+#
+# Setup SPI for the display. The ESP32-2432S028R uses separate SPI buses for display and touch
+spi:
+  - id: tft
+    clk_pin: GPIO14
+    mosi_pin: GPIO13
+    miso_pin: GPIO12
+  - id: touch
+    clk_pin: GPIO25
+    mosi_pin: GPIO32
+    miso_pin: GPIO39
+
+# Setup a pin to control the backlight
+output:
+  - platform: ledc
+    pin: GPIO21
+    id: backlight_pwm
+
+# expose web UI
+web_server:
+  port: 80
+
+display:
+  - platform: ili9xxx
+    model: ili9342
+    spi_id: tft
+    cs_pin: GPIO15
+    dc_pin: GPIO2
+    invert_colors: true
+    rotation: 180
+    lambda: |-
+      it.fill(id(Color::BLACK));
+      it.filled_rectangle(20, 60, 120, 120, id(ha_blue));
+      it.filled_rectangle(180, 60, 120, 120, id(ha_blue));
+      it.print(80, 120, id(arimo96), TextAlign::CENTER, "A");
+      it.print(240, 120, id(arimo96), TextAlign::CENTER, "B");
+      it.print(160, 210, id(arimo20), id(ha_blue), TextAlign::BOTTOM_CENTER, "Hi Andrej");
+
+# Set up the xpt2046 touch platform
+touchscreen:
+  platform: xpt2046
+  spi_id: touch
+  cs_pin: GPIO33
+  interrupt_pin: GPIO36
+  update_interval: 50ms
+  threshold: 400
+  calibration:
+    x_min: 3860
+    x_max: 280
+    y_min: 340
+    y_max: 3860
+  transform:
+    swap_xy: true
