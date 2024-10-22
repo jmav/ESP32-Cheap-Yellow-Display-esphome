@@ -2,6 +2,8 @@
 
 This is a basic YAML configuration to get the ESP32-2432S028R display working with ESPHome. It creates two rectangles that act as binary touch sensors in Home Assistant, and includes a built-in web interface.
 
+   ![New Device](images/lcd-board.jpg)
+
 Originally written by Jonny Bergdahl.
 
 - [Sample GitHub reference](https://github.com/witnessmenow/ESP32-Cheap-Yellow-Display/tree/main/Examples/ESPHome/4-TouchDemo)
